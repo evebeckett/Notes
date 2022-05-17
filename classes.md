@@ -183,3 +183,131 @@ This will log to the console:
     }
 
 Notice that the second user (userTwo) has been deleted from the array of users.
+
+## Constructors (under the hood)
+
+ES6 classes are just a little syntactic sugar build on top of the JavaScript prototype model.  JavaScript as a language doesn't really have classes.  
+
+The JavaScript prototype model was the original way we tend to create or emulate classes in JavaScript before we had the class keyword.  JavaScript is still using the prototype model under the hood.  It's important to understand the prototype model to really understand what is going on.
+
+### Constructors
+
+When we use the Class keyword, the constructor is responsible for making up the object when we want to create one based on that class.  That is the thing that binds all of the properties and values to the object.  So we'll still need a constructor function to construct the object under the prototype model.
+
+    function User(email, name){
+        this.email = email;
+        this.name = name;
+        this.online = false;
+        this.login = function(){
+            console.log(this.email, 'has logged in')
+        }
+    }
+
+    var userOne = new User('ryu@ninjas.com', 'Ryu')
+    var userTwo = new User('yoshi@mariokorp.com', 'Yoshi')
+
+    console.log(userOne);
+    userTwo.login();
+
+    // User {email: 'ryu@ninjas.com', name: 'Ryu', online: false, login f}
+
+    //yoshi@mariokorp.com has logged in
+
+We're still kind of emulating a user class this way.  It's just that we aren't using the class keyword.  This is fine, but generally when we want to attach methods to a class like this, we don't put those methods inside the constructor function.  Instead, we use the prototype property on this constructor function.
+
+## Javascript Prototype
+
+Above, we attached a method (the login function) to the constructor function.  However, in a lot of cases, it's better to use the prototype property to add methods. Otherwise the method will be directly inside the object instead of being attached to the __proto__ property.
+
+### Why is this important?
+
+Every object type has a __proto__ type.  It's like a map for the object type.  It contains the functionality fo the object type.  It will know how to use the different methods.  We're not hardcoding the methods into each different user instance.  Instead,  we're defining them once on a single user prototype and then when a user object wants to use that method, it will know how to do that.  This way of working is more effecient and allows us later to use __proto__ type inheritance.
+
+How do we access the prototype property? 
+
+    User.prototype
+
+Can't call prototype on the instances of the object. For example, userOne can't be written like this:
+
+    userOne.prototype = new Uer('ryu@ninjas.com','Ryu')
+
+In this case, userOne does not have a prototype property.  The instances have the __proto__ property, which points to the prototype.  Now we can attach method sto the prototype of User.  So instead of this (notice placement of login function):
+
+    function User(email, name){
+        this.email = email;
+        this.name = name;
+        this.online = false;
+        this.login = function(){
+        console.log(this.email, 'has logged in')
+        }
+    }
+
+    var userOne = new User('ryu@ninjas.com', 'Ryu')
+    var userTwo = new User('yoshi@mariokorp.com', 'Yoshi')
+
+
+We would do this (again, notice placement of login function):
+
+    function User(email, name){
+        this.email = email;
+        this.name = name;
+        this.online = false;
+    }
+
+    User.prototype login = function(){
+        this.online = true;
+        console.log(this.email,'has logged in');
+    }
+
+    User.prototype logout = function(){
+        this.online = false;
+        console.log(this.email, 'has logged out');
+    }
+
+Now when you console log it, the login method is no longer directly inside the object.  It's now part of the __proto__ property.
+
+### How would you add an admin class like above using the prototype model?
+
+    function User(email, name){
+        this.email = email;
+        this.name = name;
+        this.online = false;
+    }
+
+    User.prototype login = function(){
+        this.online = true;
+        console.log(this.email,'has logged in');
+    }
+
+    User.prototype logout = function(){
+        this.online = false;
+        console.log(this.email, 'has logged out');
+    }
+
+    function Admin(...args) {
+        User.apply(this, args);
+        this.role = 'super admin';
+    }
+
+    var userOne = new User('ryu@ninjas.com', 'Ryu');
+    var userTwo = new User('yoshi@mariokorp.com', 'Yoshi');
+    var admin = new Admin('shaun@ninjas.com', 'Shaun');
+
+    When you console.log the admin, this is what you'll get:
+
+        Admin { email: "shaun@ninjas.com", name: "Shaun", online: false, role:"super admin"}
+
+The "role" property only applies to admins and will not appear when creating a regular User.
+
+How do we get the methods (login, logout, etc.) to appear under the __proto__ property of admin?
+
+    Admin.prototype = Object.create(User.prototype);
+
+
+How would you add an extra method to admin that is not available to User?
+
+    Admin.prototype.deleteUser = function(u){
+        users = users.filter(user => {
+            return user.email != u.email
+        })
+    };
